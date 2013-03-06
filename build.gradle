@@ -1,0 +1,179 @@
+/*******************************************************************************
+ * Copyright (c) 2012, THE BOARD OF TRUSTEES OF THE LELAND STANFORD JUNIOR UNIVERSITY
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ *    Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *    Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *    Neither the name of the STANFORD UNIVERSITY nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'war'
+apply plugin: 'maven'
+apply plugin: 'eclipse'
+
+version = main_version + '.' + build_number
+archivesBaseName = war_archive_base_name
+
+List<String> listKey = new ArrayList<String>()
+List<String> listValue = new ArrayList<String>()
+
+configurations { 
+    runtime
+    nyxlets
+    nyxletsadmin
+    newConf
+}
+
+war {
+    into('WEB-INF/nyxlets') {
+        from configurations.nyxlets
+    }
+
+    into('WEB-INF/admin') {
+        from configurations.nyxletsadmin
+    }
+
+    // newConf related - tbd...most likely rarely used
+    from { configurations.newConf.collect { it.isDirectory() ? it : zipTree(it) } }
+
+    //strip out the version format from the nyxlet filename
+    rootSpec.allSpecs*.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
+
+    manifest {
+        attributes 'Main-Class': 'com.cyclades.engine.CycladesEngine'
+        attributes 'Provider': "${organization}"
+        attributes 'Extension-Name': 'Cyclades'
+        attributes 'Implementation-Title': "Gradle" 
+        attributes 'Implementation-Vendor-Id': "${organization}"
+        attributes 'Implementation-Version': version
+        attributes 'Built-With': 'gradle-' + GradleVersion.current()
+        attributes 'Built-By': System.getProperty('user.name')
+    }
+}
+
+war.doFirst() {
+    configurations.runtime.each { f->
+        addArtifact("$f", listKey, listValue)
+    }
+    configurations.nyxlets.each { f->
+        addArtifact("$f", listKey, listValue)
+    }
+    configurations.nyxletsadmin.each { f->
+        addArtifact("$f", listKey, listValue)
+    }
+    configurations.newConf.each { f->
+        addArtifact("$f", listKey, listValue)
+    }
+}
+
+def addArtifact (String f, List<String> listKey, List<String> listValue) {
+    RelativePath rp = RelativePath.parse(true, "$f")
+    String[] pathParts = rp.getSegments()
+    listKey.add(pathParts[pathParts.size() - 5])
+    listValue.add(pathParts[pathParts.size() - 1])
+}
+
+war.doLast() {
+    println "war.doLast() ... updating MANIFEST.MF"
+    for (i in 0..listKey.size()-1) {
+        //println "key: " + listKey.get(i) + " value: " + listValue.get(i)
+        //address issue with tomcat where the attribute key cannot contain . in it 
+        project.ext.tmpKey = listKey.get(i)
+        if (project.ext.tmpKey.contains('.'))  {
+            project.ext.tmpKey = project.ext.tmpKey.replaceAll('\\.', '-')
+        }
+        ant.jar(destfile: war.archivePath, update: true) {
+            delegate.manifest {
+                attribute(name: project.ext.tmpKey, value: listValue.get(i))
+            }
+        }
+    }
+
+    copy {
+        from "${buildDir}/libs"
+        into "${buildDir}/libs"
+        rename('(.*)-(.*).war', '$1.war')
+    }
+}
+
+dependencies {
+
+    /***************************************************************************
+     * CORE PLATFORM:
+     * - Dependencies for the core Cyclades Service Engine
+     * - Available to all clients of "The Platform", i.e. Nyxlets
+     ***************************************************************************/
+    runtime group: 'com.github.cycladessoa',            name: 'engine',                 version: '1.0.0.19', transitive: false
+    runtime group: 'org.json',                          name: 'json',                   version: '20090211'
+    runtime group: 'commons-digester',                  name: 'commons-digester',       version: '1.4.1'
+    runtime group: 'commons-logging',                   name: 'commons-logging-api',    version: '1.1'
+    runtime group: 'log4j',                             name: 'log4j',                  version: '1.2.16'
+    runtime group: 'com.google.guava',                  name: 'guava',                  version: '10.0.1'
+    runtime group: 'com.sun.mail',                      name: 'javax.mail',             version: '1.4.4'
+    runtime group: 'commons-beanutils',                 name: 'commons-beanutils',      version: '1.8.3'
+    runtime group: 'commons-lang',                      name: 'commons-lang',           version: '2.5'
+    runtime group: 'commons-logging',                   name: 'commons-logging',        version: '1.1.1'
+    runtime group: 'org.codehaus.jettison',             name: 'jettison',               version: '1.3.1'
+    runtime group: 'org.javassist',                     name: 'javassist',              version: '3.15.0-GA'
+    runtime group: 'commons-pool',                      name: 'commons-pool',           version: '1.6'
+
+    /***************************************************************************
+     * CORE NYXLETS:
+     * - Nyxlets that should be deployed with the Cyclades Service Engine by default
+     * - Available to all clients of "the platform", i.e. Cylades clients and Nyxlets via orchestration
+     ***************************************************************************/
+    nyxlets      group: 'com.github.cycladessoa.nyxlets', name: 'servicebroker', version: '1.0.0.19', transitive: false
+    nyxletsadmin group: 'com.github.cycladessoa.nyxlets', name: 'admin',         version: '1.0.0.19', transitive: false
+
+    /***************************************************************************
+     * NYXLET DEPLOYMENT INVENTORY:
+     * - Nyxlets that will be included in this Cyclades Service Engine deployment (the corresponding property file
+     *  for each Nyxlet (optional for some) can be added/found in the "src/main/webapp/WEB-INF/nyxlets" directory with the suffix
+     *  ".properties"
+     * - Available to all clients of "the platform", i.e. Cyclades clients and Nyxlets via orchestration
+     ***************************************************************************/
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'helloworld', version: '1.0.0.19', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',        version: '1.0.0.19', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',     version: '1.0.0.19', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',        version: '1.0.0.19', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',       version: '1.0.0.1',  transitive: false
+
+    /***************************************************************************
+     * NYXLET SPECIFIC SUPPORT:
+     * - Additional libraries added to support non core Cyclades Service Engine or Nyxlet dependencies
+     * - Available to all clients of "The Platform", i.e. Nyxlets
+     ***************************************************************************/
+    runtime group: 'net.sf.saxon', name: 'Saxon-HE', version: '9.4' // xsl Nyxlet
+
+    /***************************************************************************
+     * ZIP OR ARCHIVE RESOURCE SUPPORT:
+     * - Rare instance when you need to included an unpacked archive into the root of your war file
+     * - use the "newConf" key word for entries, example:
+     *    newConf group: 'net.sf.saxon', name: 'Saxon-HE', version: '9.4'
+     *    or specify a zip file after newConf with the Gradle DSL
+     ***************************************************************************/
+}
+
