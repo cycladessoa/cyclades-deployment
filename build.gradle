@@ -37,9 +37,6 @@ apply plugin: 'eclipse'
 version = main_version + '.' + build_number
 archivesBaseName = war_archive_base_name
 
-List<String> listKey = new ArrayList<String>()
-List<String> listValue = new ArrayList<String>()
-
 configurations { 
     runtime
     nyxlets
@@ -61,20 +58,15 @@ war {
 
     //strip out the version format from the nyxlet filename
     rootSpec.allSpecs*.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
-
-    manifest {
-        attributes 'Main-Class': 'com.cyclades.engine.CycladesEngine'
-        attributes 'Provider': "${organization}"
-        attributes 'Extension-Name': 'Cyclades'
-        attributes 'Implementation-Title': "Gradle" 
-        attributes 'Implementation-Vendor-Id': "${organization}"
-        attributes 'Implementation-Version': version
-        attributes 'Built-With': 'gradle-' + GradleVersion.current()
-        attributes 'Built-By': System.getProperty('user.name')
-    }
 }
 
+/***************************************************
+ * Create MANIFEST.MF 
+ ***************************************************/
 war.doFirst() {
+    List<String> listKey = new ArrayList<String>()
+    List<String> listValue = new ArrayList<String>()
+
     configurations.runtime.each { f->
         addArtifact("$f", listKey, listValue)
     }
@@ -87,6 +79,30 @@ war.doFirst() {
     configurations.newConf.each { f->
         addArtifact("$f", listKey, listValue)
     }
+
+    manifest {
+        attributes 'Main-Class': 'com.cyclades.engine.CycladesEngine'
+        attributes 'Provider': "${organization}"
+        attributes 'Extension-Name': 'Cyclades'
+        attributes 'Implementation-Title': "Gradle"
+        attributes 'Implementation-Vendor-Id': "${organization}"
+        attributes 'Implementation-Version': version
+        attributes 'Built-With': 'gradle-' + GradleVersion.current()
+        attributes 'Built-By': System.getProperty('user.name')
+
+        Map dynamicAttributes = new HashMap()
+        String key;
+        for (int i = 0; i < listKey.size(); i++) {
+            key = listKey.get(i)
+            //println "key: " + key + " value: " + listValue.get(i)
+            //address issue with tomcat where the attribute key cannot contain . in it
+            if (key.contains('.'))  {
+                key = key.replaceAll('\\.', '-')
+            }
+            dynamicAttributes.put(key, listValue.get(i))
+        }
+        attributes(dynamicAttributes)
+    }
 }
 
 def addArtifact (String f, List<String> listKey, List<String> listValue) {
@@ -97,21 +113,6 @@ def addArtifact (String f, List<String> listKey, List<String> listValue) {
 }
 
 war.doLast() {
-    println "war.doLast() ... updating MANIFEST.MF"
-    for (i in 0..listKey.size()-1) {
-        //println "key: " + listKey.get(i) + " value: " + listValue.get(i)
-        //address issue with tomcat where the attribute key cannot contain . in it 
-        project.ext.tmpKey = listKey.get(i)
-        if (project.ext.tmpKey.contains('.'))  {
-            project.ext.tmpKey = project.ext.tmpKey.replaceAll('\\.', '-')
-        }
-        ant.jar(destfile: war.archivePath, update: true) {
-            delegate.manifest {
-                attribute(name: project.ext.tmpKey, value: listValue.get(i))
-            }
-        }
-    }
-
     copy {
         from "${buildDir}/libs"
         into "${buildDir}/libs"
