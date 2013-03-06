@@ -121,7 +121,6 @@ war.doLast() {
 }
 
 dependencies {
-
     /***************************************************************************
      * CORE PLATFORM:
      * - Dependencies for the core Cyclades Service Engine
