@@ -26,13 +26,16 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISE
 OF THE POSSIBILITY OF SUCH DAMAGE.
 ////////////////////////////////////////////////////////////////////////////////
 
-This is a deployment and configuration control mechanism for a Cyclades installation. This mechanism is highly recommended
-for generating and maintaining your Cyclades installations as it enables a configurable and reproducible (operationally maintainable) artifact 
-from the specifics of this workspace. Downloading and building this template workspace will generate a Cyclades installation with all of the 
-current Cyclades SOA Nyxlets included by default. Use this as a template to create tailored Cyclades deployments for variable requirements
-...i.e. different environments, different service pools etc...
+*The* recommended mechanism for generating and maintaining your Cyclades installations as it enables a configurable and reproducible 
+(operationally maintainable) artifact from the specifics of this workspace.
 
 == Basic Features
+
+This is a deployment and configuration control mechanism for a Cyclades installation. This mechanism is highly recommended
+for generating and maintaining your Cyclades installations as it enables a configurable and reproducible (operationally maintainable) artifact
+from the specifics of this workspace. Downloading and building this template workspace will generate a Cyclades installation with all of the
+current Cyclades SOA Nyxlets included by default. Use this as a template to create tailored Cyclades deployments for variable requirements
+...i.e. different environments, different service pools etc...
 
 * Provides a reproducible mechanism for generating deployments
     ** Nyxlets/Services 
