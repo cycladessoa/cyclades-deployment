@@ -65,7 +65,7 @@ This document describes the steps involved for deploying a complete Cyclades def
 
 . From within the directory "/cycladessoa/cyclades-deployment" run the command _gradle clean build_
 
-. The Cyclades Service Engine binary distribution exists within a Nyxlet's workspace _build/libs_ directory after a successful build (_build/libs/cyclades.war_). Simply copy this file to your Tomcat installation's "webapps" directory and be sure to preserve the name "cyclades.war".
+. The Cyclades Service Engine binary distribution exists within the _build/libs_ directory after a successful build (_build/libs/cyclades.war_). Simply copy this file to your Tomcat installation's "webapps" directory and be sure to preserve the name "cyclades.war".
 
 . Restart Tomcat and verify the installation
 	.. http://localhost:8080/cyclades (Core Cyclades Service Engine status page should be displayed without error)
