@@ -126,7 +126,7 @@ dependencies {
      * - Dependencies for the core Cyclades Service Engine
      * - Available to all clients of "The Platform", i.e. Nyxlets
      ***************************************************************************/
-    runtime group: 'com.github.cycladessoa',            name: 'engine',                 version: '1.0.0.19', transitive: false
+    runtime group: 'com.github.cycladessoa',            name: 'engine',                 version: '1.0.0.20', transitive: false
     runtime group: 'org.json',                          name: 'json',                   version: '20090211'
     runtime group: 'commons-digester',                  name: 'commons-digester',       version: '1.4.1'
     runtime group: 'commons-logging',                   name: 'commons-logging-api',    version: '1.1'
@@ -145,8 +145,8 @@ dependencies {
      * - Nyxlets that should be deployed with the Cyclades Service Engine by default
      * - Available to all clients of "the platform", i.e. Cylades clients and Nyxlets via orchestration
      ***************************************************************************/
-    nyxlets      group: 'com.github.cycladessoa.nyxlets', name: 'servicebroker', version: '1.0.0.19', transitive: false
-    nyxletsadmin group: 'com.github.cycladessoa.nyxlets', name: 'admin',         version: '1.0.0.19', transitive: false
+    nyxlets      group: 'com.github.cycladessoa.nyxlets', name: 'servicebroker', version: '1.0.0.20', transitive: false
+    nyxletsadmin group: 'com.github.cycladessoa.nyxlets', name: 'admin',         version: '1.0.0.20', transitive: false
 
     /***************************************************************************
      * NYXLET DEPLOYMENT INVENTORY:
@@ -155,11 +155,11 @@ dependencies {
      *  ".properties")
      * - Available to all clients of "the platform", i.e. Cyclades clients and Nyxlets via orchestration
      ***************************************************************************/
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'helloworld', version: '1.0.0.19', transitive: false
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',        version: '1.0.0.19', transitive: false
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',     version: '1.0.0.19', transitive: false
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',        version: '1.0.0.19', transitive: false
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',       version: '1.0.0.1',  transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'helloworld', version: '1.0.0.20', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',        version: '1.0.0.20', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',     version: '1.0.0.20', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',        version: '1.0.0.20', transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',       version: '1.0.0.2',  transitive: false
 
     /***************************************************************************
      * NYXLET SPECIFIC SUPPORT:
