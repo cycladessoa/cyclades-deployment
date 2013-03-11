@@ -34,6 +34,8 @@ apply plugin: 'war'
 apply plugin: 'maven'
 apply plugin: 'eclipse'
 
+apply from: 'deployments.gradle'
+
 version = main_version + '.' + build_number
 archivesBaseName = war_archive_base_name
 
@@ -119,6 +121,25 @@ war.doLast() {
         rename('(.*)-(.*).war', '$1.war')
     }
 }
+
+task copyNyxletLibs(type: Copy) {
+    into "${buildDir}/libs/nyxlets"
+    from configurations.nyxlets
+    rootSpec.allSpecs*.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
+}
+
+task copyNyxletsDir(type: Copy, dependsOn: copyNyxletLibs) {
+    into "${buildDir}/libs/nyxlets"
+    from "${rootDir}/src/main/webapp/WEB-INF/nyxlets"
+}
+
+task zipNyxlets(type: Zip, dependsOn: copyNyxletsDir) {
+    from "${buildDir}/libs/nyxlets"
+    into "/nyxlets"
+    archiveName = "nyxlets.zip"
+}
+
+assemble.dependsOn(zipNyxlets)
 
 dependencies {
     /***************************************************************************

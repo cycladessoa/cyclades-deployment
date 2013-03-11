@@ -1,0 +1,332 @@
+/*******************************************************************************
+ * Copyright (c) 2012, THE BOARD OF TRUSTEES OF THE LELAND STANFORD JUNIOR UNIVERSITY
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ *    Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *    Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *    Neither the name of the STANFORD UNIVERSITY nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+
+buildscript {
+        repositories {
+                mavenCentral()
+        }
+
+        dependencies {
+                classpath group:'com.github.cycladessoa.nyxlets', name:'servicebroker', version:'latest.integration'
+        }
+}
+
+import org.json.JSONObject
+import org.cyclades.engine.stroma.xstroma.XSTROMARequestBuilder
+import org.cyclades.engine.stroma.xstroma.STROMARequestBuilder
+import org.cyclades.client.Http;
+import org.cyclades.engine.stroma.xstroma.XSTROMABrokerResponse
+import org.cyclades.engine.stroma.xstroma.XSTROMABrokerRequest
+import org.cyclades.engine.stroma.STROMAResponse
+import org.cyclades.engine.stroma.xstroma.STROMARequest
+import org.cyclades.engine.util.TransactionIdentifier
+import org.cyclades.io.ResourceRequestUtils
+
+task uploadAndDeployNyxlets () {
+    description = 'Upload and deploy Nyxlets to the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+    doLast () {
+        tasks.uploadNyxletsHTTP.execute()
+        tasks.deplpoyNyxletsHTTP.execute()
+    }
+}
+
+task uploadNyxletsHTTP () {
+    description = 'Transfer an archived Nyxlet package to the specified Cyclades Service Engines list (property "engines"), vial provided HTTP APIs'
+    doLast () {
+	String requestURI = "/admin?action=PUT&uri=${target_upload_nyxlet_installation_path}&raw-response"
+        for (String url : engines.split("[,]")) {
+            String result = null
+            try {
+                println("Uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
+                byte[] resource = ResourceRequestUtils.getData(nyxlet_source_upload_path, null);
+                if (resource == null || resource.length == 0) throw new Exception("Empty data to upload!")
+                Map<String, String> attributeMap = new HashMap<String, String>()
+		attributeMap.put("Content-Type", "")
+                ResourceRequestUtils.getData(url + requestURI, resource, attributeMap, 1024)
+                println("Successful upload of resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
+            } catch (Exception e) {
+                println("Failed uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+task deplpoyNyxletsHTTP () {
+    description = 'Install/deploy a Nyxlet package remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+    doLast () {
+        String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
+        displayRunMessage(tid)
+        runXSTROMARequestsHTTP(generateDeploymentRequests(tid), engines)
+        tasks.reloadServiceEngines.execute()
+    }
+}
+
+task rollBackNyxletsHTTP () {
+    description = 'Rollback a previous Nyxlet package remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+    doLast () {
+        String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
+        displayRunMessage(tid)
+        tasks.reloadServiceEnginesSafetyMode.execute()
+        runSTROMARequestsHTTP(generateRollbackRequests(tid), engines)
+        tasks.reloadServiceEngines.execute()
+    }
+}
+
+def generateDeploymentRequests (tid) {
+    // Create X-STROMA request builder
+    List<XSTROMARequestBuilder> cycladesSOARequests = new ArrayList<XSTROMARequestBuilder>()
+    XSTROMARequestBuilder xstromaBuilder = XSTROMARequestBuilder.newInstance(null)
+    
+    // Add X-STROMA level parameters
+    xstromaBuilder
+    .parameter("transaction-data", tid.toString())
+    .parameter("duration", "true")
+    .parameter("service-agent", "true")
+    .parameter("enable-orchestration-fault", "true")
+    .json()
+
+    // Download new resource (we don't need this if we have already pushed a deployment here)
+    // This is in the event that a.) you are running on local host or b.) a deployment exists in a
+    // directory somewhere that can be accessed
+    if (rootProject.hasProperty('target_engine_source_download_path')) {
+        xstromaBuilder.add(
+            STROMARequestBuilder.newInstance("admin")
+            .parameter("action", "add")
+            .parameter("source", (!target_engine_source_download_path.isEmpty()) ? target_engine_source_download_path : "${buildDir}/distributions/nyxlets.zip")
+            .parameter("uri", target_engine_temp_installation_path)
+        )
+    }
+
+    // Archive active resource
+    xstromaBuilder.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("action", "zipdirectory")
+        .parameter("source", "WEB-INF/nyxlets")
+        .parameter("uri", "WEB-INF/backup/nyxlets.zip")
+    )
+
+    // Remove current active resource
+    xstromaBuilder.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("action", "delete")
+        .parameter("dir", "true")
+        .parameter("uri", "WEB-INF/nyxlets")
+    )
+
+    // Install new resource
+    xstromaBuilder.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("action", "unzipdirectory")
+        .parameter("source", target_engine_temp_installation_path)
+        .parameter("uri", "WEB-INF")
+    )
+
+    // Delete installation file
+    if (rootProject.hasProperty('target_engine_temp_installation_path_delete') && target_engine_temp_installation_path_delete.equalsIgnoreCase("true")) {
+        xstromaBuilder.add(
+            STROMARequestBuilder.newInstance("admin")
+            .parameter("action", "delete")
+            .parameter("uri", target_engine_temp_installation_path)
+        )
+    }
+
+    cycladesSOARequests.add(xstromaBuilder.build())
+    return cycladesSOARequests
+}
+
+def generateRollbackRequests (tid) {
+    List<STROMARequest> cycladesSOARequests = new ArrayList<STROMARequest>()
+
+    String tempResource = "/tmp/nyxlets.tmp.zip"
+
+    // Download new resoucre (Do this more to verify it exists before deleting anything)
+    cycladesSOARequests.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("transaction-data", tid.toString())
+        .parameter("duration", "true")
+        .parameter("service-agent", "true")
+        .json()
+        .parameter("action", "add")
+        .parameter("source", "WEB-INF/backup/nyxlets.zip")
+        .parameter("uri", tempResource)
+        .build()
+    )
+
+    // Remove current active resource
+    cycladesSOARequests.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("transaction-data", tid.toString())
+        .parameter("duration", "true")
+        .parameter("service-agent", "true")
+        .json()
+        .parameter("action", "delete")
+        .parameter("dir", "true")
+        .parameter("uri", "WEB-INF/nyxlets")
+        .build()
+    )
+
+    // Install backup resource
+    cycladesSOARequests.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("transaction-data", tid.toString())
+        .parameter("duration", "true")
+        .parameter("service-agent", "true")
+        .json()
+        .parameter("action", "unzipdirectory")
+        .parameter("source", tempResource)
+        .parameter("uri", "WEB-INF/nyxlets")
+        .build()
+    )
+
+    // Delete installation file
+    cycladesSOARequests.add(
+        STROMARequestBuilder.newInstance("admin")
+        .parameter("transaction-data", tid.toString())
+        .parameter("duration", "true")
+        .parameter("service-agent", "true")
+        .json()
+        .parameter("action", "delete")
+        .parameter("uri", tempResource)
+        .build()
+    )
+
+    return cycladesSOARequests
+}
+
+task reloadServiceEngines () {
+    description = 'Reloads the Cyclades Service Engines in the specified list (property "engines")'
+
+    doLast () {
+        for (String url : engines.split("[,]")) {
+            String result = null
+            try {
+                println("RELOAD STARTING:[" + url + "]")
+                result = new String(ResourceRequestUtils.getData(url + "?action=reload", null))
+                if (result.indexOf("servicebroker") < 0) throw new Exception("Invalid Result Encountered " + result)
+                println("RELOAD SUCCEEDED:[" + url + "]")
+            } catch (Exception e) {
+                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+task reloadServiceEnginesSafetyMode () {
+    description = 'Reloads the Cyclades Service Engines in the specified list (property "engines") in safety mode'
+
+    doLast () {
+        for (String url : engines.split("[,]")) {
+            String result = null
+            try {
+                println("RELOAD STARTING:[" + url + "]")
+                result = new String(ResourceRequestUtils.getData(url + "?action=reload&uris=admin", null))
+                if (result.indexOf("admin") < 0) throw new Exception("Invalid Result Encountered " + result)
+                println("RELOAD SUCCEEDED:[" + url + "]")
+            } catch (Exception e) {
+                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+def displayRunMessage (tid) {
+    println "\nSubmitting jobs with transaction id: ${tid}"
+}
+
+def runXSTROMARequestsHTTP (List<XSTROMABrokerRequest> requests, String serviceBrokerURLs) {
+    for (String url : serviceBrokerURLs.split("[,]")) {    
+        for (XSTROMABrokerRequest request : requests) {
+            String xstromaResponseString =  new String(Http.execute(url + '/servicebroker', request))
+            println ''
+            println ''
+
+            XSTROMABrokerResponse xstromaResponseObject = XSTROMABrokerResponse.parse(xstromaResponseString)
+            if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
+                printSTROMAResponse(new STROMAResponse(xstromaResponseString))
+            } else {
+                printXSTROMAResponse(xstromaResponseObject)
+            }
+        }
+    }
+}
+
+def runSTROMARequestsHTTP (List<STROMARequest> requests, String URLs) {
+    for (String url : URLs.split("[,]")) {
+        for (STROMARequest request : requests) {
+            String stromaResponseString =  new String(Http.execute(url + '/' + request.getServiceName(), request))
+            println ''
+            println ''
+            printSTROMAResponse(new STROMAResponse(stromaResponseString))
+        }
+    }
+}
+
+def printXSTROMAResponse (XSTROMABrokerResponse xstromaResponseObject) {
+    if (xstromaResponseObject.getOrchestrationFault()) System.out.println("Orchestration Fault Raised!!!!!")
+    if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
+        // If we're in here, this is most likely the response of a "chained" request, where it will always be
+        // the response of the last request in the X-STROMA request
+        printSTROMAResponse(new STROMAResponse(xstromaResponseString))
+    } else {
+        // We have an X-STROMA formatted response
+        println "\nX-STROMA Level Parameters"
+        println "error-code: " + xstromaResponseObject.getErrorCode()
+        println "transaction-data: " + xstromaResponseObject.getTransactionData()
+        println "service-agent: " + xstromaResponseObject.getServiceAgent()
+        println "duration: " + xstromaResponseObject.getDuration()
+        if (xstromaResponseObject.getErrorCode() != 0) {
+            println "error-message: " + xstromaResponseObject.getErrorMessage()
+            return
+        }
+
+        xstromaResponseObject.getResponses().each { STROMAResponse sr ->
+            printSTROMAResponse(sr)
+        }
+    }
+}
+
+def printSTROMAResponse (STROMAResponse sr) {
+    println ""
+    println "\tService (STROMA) Level Parameters"
+    println "\tservice: " + sr.getServiceName()
+    println "\taction: " + sr.getAction()
+    println "\terror-code: " + sr.getErrorCode()
+    println "\ttransaction-data: " + sr.getTransactionData()
+    println "\tservice-agent: " + sr.getServiceAgent()
+    println "\tduration: " + sr.getDuration()
+    if (sr.getErrorCode() != 0) {
+        println "\terror-message: " + sr.getErrorMessage()
+    }
+    // getData() retrieves any raw payload information embedded in the response (as a JSONObject or Node class type)
+    // depending on the meta type requested
+    //println "\t" + sr.getData().getClass()
+    println "\t" + sr.getParameters()
+}
