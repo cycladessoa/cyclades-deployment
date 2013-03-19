@@ -47,16 +47,16 @@ import org.cyclades.engine.stroma.xstroma.STROMARequest
 import org.cyclades.engine.util.TransactionIdentifier
 import org.cyclades.io.ResourceRequestUtils
 
-task uploadAndDeployNyxlets () {
-    description = 'Upload and deploy Nyxlets to the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+task installNyxlets () {
+    description = 'Upload and deploy the Nyxlets of this workspace to the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
     doLast () {
-        tasks.uploadNyxletsHTTP.execute()
-        tasks.deplpoyNyxletsHTTP.execute()
+        tasks.uploadNyxlets.execute()
+        tasks.deployNyxlets.execute()
     }
 }
 
-task uploadNyxletsHTTP () {
-    description = 'Transfer an archived Nyxlet package to the specified Cyclades Service Engines list (property "engines"), vial provided HTTP APIs'
+task uploadNyxlets () {
+    description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
 	String requestURI = "/admin?action=PUT&uri=${target_upload_nyxlet_installation_path}&raw-response"
         for (String url : engines.split("[,]")) {
@@ -77,8 +77,8 @@ task uploadNyxletsHTTP () {
     }
 }
 
-task deplpoyNyxletsHTTP () {
-    description = 'Install/deploy a Nyxlet package remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+task deployNyxlets () {
+    description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
         String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
         displayRunMessage(tid)
@@ -87,8 +87,8 @@ task deplpoyNyxletsHTTP () {
     }
 }
 
-task rollBackNyxletsHTTP () {
-    description = 'Rollback a previous Nyxlet package remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+task rollBackNyxlets () {
+    description = 'Rollback a previous Nyxlet installation remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
     doLast () {
         String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
         displayRunMessage(tid)

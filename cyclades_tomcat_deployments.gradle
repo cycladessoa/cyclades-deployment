@@ -1,0 +1,95 @@
+/*******************************************************************************
+ * Copyright (c) 2012, THE BOARD OF TRUSTEES OF THE LELAND STANFORD JUNIOR UNIVERSITY
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ *    Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *    Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *    Neither the name of the STANFORD UNIVERSITY nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *******************************************************************************/
+
+buildscript {
+        repositories {
+                mavenCentral()
+        }
+
+        dependencies {
+                classpath group:'com.github.cycladessoa.nyxlets', name:'servicebroker', version:'latest.integration'
+                classpath group:'commons-codec', name:'commons-codec', version:'1.7'
+        }
+}
+
+import org.cyclades.io.ResourceRequestUtils
+import org.apache.commons.codec.binary.Base64
+import org.cyclades.io.StreamUtils
+
+task removeCyclades () {
+    description = 'Remove the Cyclades web application from the locations specified in the "engines" property'
+    doLast () {
+        for (String url : tomcat_deployment_uris.split("[,]")) {
+            String result = null
+            try {
+                Map<String, String> attributeMap = new HashMap<String, String>()
+                attributeMap.put("Authorization", basicHttpAuthField(tomcat_deployments_user, tomcat_deployments_password))
+                String response = new String(ResourceRequestUtils.getData(url + stop_uri, null, attributeMap, 1024))
+                if (response.indexOf("OK") < 0) throw new Exception("Stopping the web application failed: " + response)
+                response = new String(ResourceRequestUtils.getData(url + undeploy_uri, null, attributeMap, 1024))
+                if (response.indexOf("OK") < 0) throw new Exception("Undeploying the web application failed: " + response)
+                println("Successful removal of Cyclades Service Engine [" + url + "]")
+            } catch (Exception e) {
+                println("Failed removing the Cyclades Service Engine [" + url + "]: " + e)
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+task installCyclades () {
+    description = 'Install the Cyclades web application on the locations specified in the "engines" property'
+    doLast () {
+        for (String url : tomcat_deployment_uris.split("[,]")) {
+            String result = null
+            InputStream warInputStream = null
+            InputStream responseInputStream = null
+            try {
+                Map<String, String> attributeMap = new HashMap<String, String>()
+                attributeMap.put("Authorization", basicHttpAuthField(tomcat_deployments_user, tomcat_deployments_password))
+                warInputStream = ResourceRequestUtils.getInputStream("${buildDir}/libs/cyclades.war", null)
+                HttpURLConnection connection = ResourceRequestUtils.getHttpURLConnection(url + deploy_uri, "PUT", warInputStream, attributeMap, -1, -1)
+                responseInputStream = connection.getInputStream()
+                String response = new String(StreamUtils.toByteArray(responseInputStream))
+                if (response.indexOf("OK") < 0) throw new Exception("Installing the web application failed: " + response)
+                println("Successful installation of  Cyclades Service Engine [" + url + "]")
+            } catch (Exception e) {
+                println("Failed removing the Cyclades Service Engine [" + url + "]: " + e)
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            } finally {
+                try { warInputStream.close(); } catch (Exception e) {}
+                try { responseInputStream.close(); } catch (Exception e) {}
+            }
+        }
+    }
+}
+
+def basicHttpAuthField (String userName, String password) {
+    byte[] authBytes = new String(userName + ":" + password).getBytes()
+    return "Basic " + new String(new Base64().encode(authBytes))
+}

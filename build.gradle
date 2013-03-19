@@ -34,7 +34,8 @@ apply plugin: 'war'
 apply plugin: 'maven'
 apply plugin: 'eclipse'
 
-apply from: 'deployments.gradle'
+apply from: 'nyxlet_deployments.gradle'
+apply from: 'cyclades_tomcat_deployments.gradle'
 
 version = main_version + '.' + build_number
 archivesBaseName = war_archive_base_name
