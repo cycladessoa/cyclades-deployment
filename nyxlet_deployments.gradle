@@ -59,6 +59,7 @@ task uploadNyxlets () {
     description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
 	String requestURI = "/admin?action=PUT&uri=${target_upload_nyxlet_installation_path}&raw-response"
+	if (rootProject.hasProperty('admin_service_password')) requestURI = requestURI + "&password=" + admin_service_password
         for (String url : engines.split("[,]")) {
             String result = null
             try {
@@ -110,6 +111,8 @@ def generateDeploymentRequests (tid) {
     .parameter("service-agent", "true")
     .parameter("enable-orchestration-fault", "true")
     .json()
+    
+    if (rootProject.hasProperty('admin_service_password')) xstromaBuilder.parameter("password", admin_service_password)
 
     // Download new resource (we don't need this if we have already pushed a deployment here)
     // This is in the event that a.) you are running on local host or b.) a deployment exists in a
@@ -164,6 +167,7 @@ def generateRollbackRequests (tid) {
     List<STROMARequest> cycladesSOARequests = new ArrayList<STROMARequest>()
 
     String tempResource = "/tmp/nyxlets.tmp.zip"
+    String password = (rootProject.hasProperty('admin_service_password')) ? admin_service_password : "n/a"
 
     // Download new resoucre (Do this more to verify it exists before deleting anything)
     cycladesSOARequests.add(
@@ -175,6 +179,7 @@ def generateRollbackRequests (tid) {
         .parameter("action", "add")
         .parameter("source", "WEB-INF/backup/nyxlets.zip")
         .parameter("uri", tempResource)
+        .parameter("password", password)
         .build()
     )
 
@@ -188,6 +193,7 @@ def generateRollbackRequests (tid) {
         .parameter("action", "delete")
         .parameter("dir", "true")
         .parameter("uri", "WEB-INF/nyxlets")
+        .parameter("password", password)
         .build()
     )
 
@@ -201,6 +207,7 @@ def generateRollbackRequests (tid) {
         .parameter("action", "unzipdirectory")
         .parameter("source", tempResource)
         .parameter("uri", "WEB-INF/nyxlets")
+        .parameter("password", password)
         .build()
     )
 
@@ -213,6 +220,7 @@ def generateRollbackRequests (tid) {
         .json()
         .parameter("action", "delete")
         .parameter("uri", tempResource)
+        .parameter("password", password)
         .build()
     )
 
