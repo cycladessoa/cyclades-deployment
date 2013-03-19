@@ -81,10 +81,17 @@ task uploadNyxlets () {
 task deployNyxlets () {
     description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
-        String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
-        displayRunMessage(tid)
-        runXSTROMARequestsHTTP(generateDeploymentRequests(tid), engines)
-        tasks.reloadServiceEngines.execute()
+    	String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
+    	for (String url : engines.split("[,]")) {
+            try {
+                displayRunMessage(tid)
+                runXSTROMARequestsHTTP(generateDeploymentRequests(tid), url)
+                tasks.reloadServiceEngines.execute()
+            } catch (Exception e) {
+            	println("Failed deploying syxlets :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
+            	if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+    	}
     }
 }
 
@@ -92,10 +99,17 @@ task rollBackNyxlets () {
     description = 'Rollback a previous Nyxlet installation remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
     doLast () {
         String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
-        displayRunMessage(tid)
-        tasks.reloadServiceEnginesSafetyMode.execute()
-        runSTROMARequestsHTTP(generateRollbackRequests(tid), engines)
-        tasks.reloadServiceEngines.execute()
+        for (String url : engines.split("[,]")) {
+            try {
+                displayRunMessage(tid)
+                tasks.reloadServiceEnginesSafetyMode.execute()
+                runSTROMARequestsHTTP(generateRollbackRequests(tid), url)
+                tasks.reloadServiceEngines.execute()
+            } catch (Exception e) {
+            	println("Failed rolling back Nyxlets on the Cyclades Service Engine [" + url + "]: " + e)
+            	if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
     }
 }
 
@@ -269,36 +283,32 @@ def displayRunMessage (tid) {
     println "\nSubmitting jobs with transaction id: ${tid}"
 }
 
-def runXSTROMARequestsHTTP (List<XSTROMABrokerRequest> requests, String serviceBrokerURLs) {
-    for (String url : serviceBrokerURLs.split("[,]")) {    
-        for (XSTROMABrokerRequest request : requests) {
-            String xstromaResponseString =  new String(Http.execute(url + '/servicebroker', request))
-            println ''
-            println ''
+def runXSTROMARequestsHTTP (List<XSTROMABrokerRequest> requests, String url) {
+    for (XSTROMABrokerRequest request : requests) {
+        String xstromaResponseString =  new String(Http.execute(url + '/servicebroker', request))
+        println ''
+        println ''
 
-            XSTROMABrokerResponse xstromaResponseObject = XSTROMABrokerResponse.parse(xstromaResponseString)
-            if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
-                STROMAResponse response = new STROMAResponse(xstromaResponseString)
-                printSTROMAResponse(response)
-                if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
-            } else {
-                printXSTROMAResponse(xstromaResponseObject)
-                if (xstromaResponseObject.getOrchestrationFault()) throw new Exception("Orchestration fault encountered in response")
-            }
+        XSTROMABrokerResponse xstromaResponseObject = XSTROMABrokerResponse.parse(xstromaResponseString)
+        if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
+            STROMAResponse response = new STROMAResponse(xstromaResponseString)
+            printSTROMAResponse(response)
+            if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
+        } else {
+            printXSTROMAResponse(xstromaResponseObject)
+            if (xstromaResponseObject.getOrchestrationFault()) throw new Exception("Orchestration fault encountered in response")
         }
     }
 }
 
-def runSTROMARequestsHTTP (List<STROMARequest> requests, String URLs) {
-    for (String url : URLs.split("[,]")) {
-        for (STROMARequest request : requests) {
-            String stromaResponseString =  new String(Http.execute(url + '/' + request.getServiceName(), request))
-            println ''
-            println ''
-            STROMAResponse response = new STROMAResponse(stromaResponseString);
-            printSTROMAResponse(response)
-            if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
-        }
+def runSTROMARequestsHTTP (List<STROMARequest> requests, String url) {
+    for (STROMARequest request : requests) {
+        String stromaResponseString =  new String(Http.execute(url + '/' + request.getServiceName(), request))
+        println ''
+        println ''
+        STROMAResponse response = new STROMAResponse(stromaResponseString);
+        printSTROMAResponse(response)
+        if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
     }
 }
 
