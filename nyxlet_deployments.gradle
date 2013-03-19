@@ -279,10 +279,10 @@ def runXSTROMARequestsHTTP (List<XSTROMABrokerRequest> requests, String serviceB
             XSTROMABrokerResponse xstromaResponseObject = XSTROMABrokerResponse.parse(xstromaResponseString)
             if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
                 STROMAResponse response = new STROMAResponse(xstromaResponseString)
-                processSTROMAResponse(response)
+                printSTROMAResponse(response)
                 if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
             } else {
-                processXSTROMAResponse(xstromaResponseObject)
+                printXSTROMAResponse(xstromaResponseObject)
                 if (xstromaResponseObject.getOrchestrationFault()) throw new Exception("Orchestration fault encountered in response")
             }
         }
@@ -296,7 +296,7 @@ def runSTROMARequestsHTTP (List<STROMARequest> requests, String URLs) {
             println ''
             println ''
             STROMAResponse response = new STROMAResponse(stromaResponseString);
-            processSTROMAResponse(response)
+            printSTROMAResponse(response)
             if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
         }
     }
