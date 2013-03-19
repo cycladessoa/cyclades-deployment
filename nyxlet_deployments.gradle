@@ -58,17 +58,19 @@ task installNyxlets () {
 task uploadNyxlets () {
     description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
-	String requestURI = "/admin?action=PUT&uri=${target_upload_nyxlet_installation_path}&raw-response"
+	String requestURI = "/admin?uri=${target_upload_nyxlet_installation_path}&raw-response"
 	if (rootProject.hasProperty('admin_service_password')) requestURI = requestURI + "&password=" + admin_service_password
         for (String url : engines.split("[,]")) {
             String result = null
             try {
+            	println("Deleting resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
+            	ResourceRequestUtils.getData(url + requestURI + "&action=delete", null);
                 println("Uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
                 byte[] resource = ResourceRequestUtils.getData(nyxlet_source_upload_path, null);
                 if (resource == null || resource.length == 0) throw new Exception("Empty data to upload!")
                 Map<String, String> attributeMap = new HashMap<String, String>()
 		attributeMap.put("Content-Type", "")
-                ResourceRequestUtils.getData(url + requestURI, resource, attributeMap, 1024)
+                ResourceRequestUtils.getData(url + requestURI + "&action=PUT", resource, attributeMap, 1024)
                 println("Successful upload of resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
             } catch (Exception e) {
                 println("Failed uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
