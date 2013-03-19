@@ -42,7 +42,7 @@ import org.apache.commons.codec.binary.Base64
 import org.cyclades.io.StreamUtils
 
 task removeCyclades () {
-    description = 'Remove the Cyclades web application from the locations specified in the "engines" property'
+    description = 'Remove the Cyclades web application from the Tomcat installations specified in the "tomcat_deployment_uris" property'
     doLast () {
         for (String url : tomcat_deployment_uris.split("[,]")) {
             String result = null
@@ -63,7 +63,7 @@ task removeCyclades () {
 }
 
 task installCyclades () {
-    description = 'Install the Cyclades web application on the locations specified in the "engines" property'
+    description = 'Install the Cyclades web application on the Tomcat installations specified in the "tomcat_deployment_uris" property'
     doLast () {
         for (String url : tomcat_deployment_uris.split("[,]")) {
             String result = null
