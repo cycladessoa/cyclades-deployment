@@ -57,7 +57,7 @@ public class BuildCommon {
         	Map<String, String> attributeMap = new HashMap<String, String>();
             attributeMap.put("Content-Type", "");
             HttpURLConnection connection = ResourceRequestUtils.getHttpURLConnection(url + 
-                    requestURI.append("&raw-response").toString() + "&action=PUT", "PUT", sourceInputStream, attributeMap, -1, -1);
+                    requestURI.toString() + "&raw-response&action=PUT", "PUT", sourceInputStream, attributeMap, -1, -1);
             responseInputStream = connection.getInputStream();
             String response = new String(StreamUtils.toByteArray(responseInputStream));
         	if (connection.getResponseCode() != 200) throw new Exception("Invalid response code returned: " + 
