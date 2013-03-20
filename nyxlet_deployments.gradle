@@ -67,41 +67,6 @@ task uploadNyxlets () {
     }
 }
 
-task deployNyxlets () {
-    description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
-    doLast () {
-    	String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
-    	for (String url : engines.split("[,]")) {
-            try {
-                displayRunMessage(tid)
-                BuildCommon.runXSTROMARequestsHTTP(generateDeploymentRequests(tid), url)
-                BuildCommon.reloadServiceEngine(url)
-            } catch (Exception e) {
-            	println("Failed deploying syxlets :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
-            	if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-    	}
-    }
-}
-
-task rollBackNyxlets () {
-    description = 'Rollback a previous Nyxlet installation remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
-    doLast () {
-        String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
-        for (String url : engines.split("[,]")) {
-            try {
-                displayRunMessage(tid)
-                BuildCommon.reloadServiceEngineSafetyMode(url)
-                BuildCommon.runSTROMARequestsHTTP(generateRollbackRequests(tid), url)
-                BuildCommon.reloadServiceEngine(url)
-            } catch (Exception e) {
-            	println("Failed rolling back Nyxlets on the Cyclades Service Engine [" + url + "]: " + e)
-            	if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
-    }
-}
-
 task reloadServiceEngines () {
     description = 'Reloads the Cyclades Service Engines in the specified list (property "engines")'
     doLast () {
@@ -130,6 +95,23 @@ task reloadServiceEnginesSafetyMode () {
                 println("RELOAD SUCCEEDED:[" + url + "]")
             } catch (Exception e) {
                 println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+task deployNyxlets () {
+    description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
+    doLast () {
+        String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
+        for (String url : engines.split("[,]")) {
+            try {
+                displayRunMessage(tid)
+                BuildCommon.runXSTROMARequestsHTTP(generateDeploymentRequests(tid), url)
+                BuildCommon.reloadServiceEngine(url)
+            } catch (Exception e) {
+                println("Failed deploying syxlets :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
                 if (exit_on_failure.equalsIgnoreCase("true")) throw e
             }
         }
@@ -198,6 +180,24 @@ def generateDeploymentRequests (tid) {
 
     cycladesSOARequests.add(xstromaBuilder.build())
     return cycladesSOARequests
+}
+
+task rollBackNyxlets () {
+    description = 'Rollback a previous Nyxlet installation remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
+    doLast () {
+        String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
+        for (String url : engines.split("[,]")) {
+            try {
+                displayRunMessage(tid)
+                BuildCommon.reloadServiceEngineSafetyMode(url)
+                BuildCommon.runSTROMARequestsHTTP(generateRollbackRequests(tid), url)
+                BuildCommon.reloadServiceEngine(url)
+            } catch (Exception e) {
+                println("Failed rolling back Nyxlets on the Cyclades Service Engine [" + url + "]: " + e)
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
 }
 
 def generateRollbackRequests (tid) {
