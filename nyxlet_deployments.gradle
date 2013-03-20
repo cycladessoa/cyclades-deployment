@@ -36,16 +36,11 @@ buildscript {
         }
 }
 
-import org.json.JSONObject
 import org.cyclades.engine.stroma.xstroma.XSTROMARequestBuilder
 import org.cyclades.engine.stroma.xstroma.STROMARequestBuilder
-import org.cyclades.client.Http;
-import org.cyclades.engine.stroma.xstroma.XSTROMABrokerResponse
-import org.cyclades.engine.stroma.xstroma.XSTROMABrokerRequest
-import org.cyclades.engine.stroma.STROMAResponse
 import org.cyclades.engine.stroma.xstroma.STROMARequest
 import org.cyclades.engine.util.TransactionIdentifier
-import org.cyclades.io.ResourceRequestUtils
+import BuildCommon
 
 task installNyxlets () {
     description = 'Upload and deploy the Nyxlets of this workspace to the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
@@ -58,19 +53,11 @@ task installNyxlets () {
 task uploadNyxlets () {
     description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
-	String requestURI = "/admin?uri=${target_upload_nyxlet_installation_path}&raw-response"
-	if (rootProject.hasProperty('admin_service_password')) requestURI = requestURI + "&password=" + admin_service_password
+        String password = (rootProject.hasProperty('admin_service_password')) ? admin_service_password : null 
         for (String url : engines.split("[,]")) {
-            String result = null
             try {
-            	println("Deleting resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
-            	ResourceRequestUtils.getData(url + requestURI + "&action=delete", null);
                 println("Uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
-                byte[] resource = ResourceRequestUtils.getData(nyxlet_source_upload_path, null);
-                if (resource == null || resource.length == 0) throw new Exception("Empty data to upload!")
-                Map<String, String> attributeMap = new HashMap<String, String>()
-		attributeMap.put("Content-Type", "")
-                ResourceRequestUtils.getData(url + requestURI + "&action=PUT", resource, attributeMap, 1024)
+		BuildCommon.uploadFile(url, password, nyxlet_source_upload_path, target_upload_nyxlet_installation_path, true)
                 println("Successful upload of resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
             } catch (Exception e) {
                 println("Failed uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
@@ -87,8 +74,8 @@ task deployNyxlets () {
     	for (String url : engines.split("[,]")) {
             try {
                 displayRunMessage(tid)
-                runXSTROMARequestsHTTP(generateDeploymentRequests(tid), url)
-                tasks.reloadServiceEngines.execute()
+                BuildCommon.runXSTROMARequestsHTTP(generateDeploymentRequests(tid), url)
+                BuildCommon.reloadServiceEngine(url)
             } catch (Exception e) {
             	println("Failed deploying syxlets :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
             	if (exit_on_failure.equalsIgnoreCase("true")) throw e
@@ -104,12 +91,46 @@ task rollBackNyxlets () {
         for (String url : engines.split("[,]")) {
             try {
                 displayRunMessage(tid)
-                tasks.reloadServiceEnginesSafetyMode.execute()
-                runSTROMARequestsHTTP(generateRollbackRequests(tid), url)
-                tasks.reloadServiceEngines.execute()
+                BuildCommon.reloadServiceEngineSafetyMode(url)
+                BuildCommon.runSTROMARequestsHTTP(generateRollbackRequests(tid), url)
+                BuildCommon.reloadServiceEngine(url)
             } catch (Exception e) {
             	println("Failed rolling back Nyxlets on the Cyclades Service Engine [" + url + "]: " + e)
             	if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+task reloadServiceEngines () {
+    description = 'Reloads the Cyclades Service Engines in the specified list (property "engines")'
+    doLast () {
+        for (String url : engines.split("[,]")) {
+            String result = null
+            try {
+                println("RELOAD STARTING:[" + url + "]")
+                BuildCommon.reloadServiceEngine(url)
+                println("RELOAD SUCCEEDED:[" + url + "]")
+            } catch (Exception e) {
+                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
+            }
+        }
+    }
+}
+
+task reloadServiceEnginesSafetyMode () {
+    description = 'Reloads the Cyclades Service Engines in the specified list (property "engines") in safety mode'
+    doLast () {
+        for (String url : engines.split("[,]")) {
+            String result = null
+            try {
+                println("RELOAD STARTING:[" + url + "]")
+                BuildCommon.reloadServiceEngineSafetyMode(url)
+                println("RELOAD SUCCEEDED:[" + url + "]")
+            } catch (Exception e) {
+                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
+                if (exit_on_failure.equalsIgnoreCase("true")) throw e
             }
         }
     }
@@ -243,115 +264,6 @@ def generateRollbackRequests (tid) {
     return cycladesSOARequests
 }
 
-task reloadServiceEngines () {
-    description = 'Reloads the Cyclades Service Engines in the specified list (property "engines")'
-
-    doLast () {
-        for (String url : engines.split("[,]")) {
-            String result = null
-            try {
-                println("RELOAD STARTING:[" + url + "]")
-                result = new String(ResourceRequestUtils.getData(url + "?action=reload", null))
-                if (result.indexOf("servicebroker") < 0) throw new Exception("Invalid Result Encountered " + result)
-                println("RELOAD SUCCEEDED:[" + url + "]")
-            } catch (Exception e) {
-                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
-    }
-}
-
-task reloadServiceEnginesSafetyMode () {
-    description = 'Reloads the Cyclades Service Engines in the specified list (property "engines") in safety mode'
-
-    doLast () {
-        for (String url : engines.split("[,]")) {
-            String result = null
-            try {
-                println("RELOAD STARTING:[" + url + "]")
-                result = new String(ResourceRequestUtils.getData(url + "?action=reload&uris=admin", null))
-                if (result.indexOf("admin") < 0) throw new Exception("Invalid Result Encountered " + result)
-                println("RELOAD SUCCEEDED:[" + url + "]")
-            } catch (Exception e) {
-                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
-    }
-}
-
 def displayRunMessage (tid) {
     println "\nSubmitting jobs with transaction id: ${tid}"
-}
-
-def runXSTROMARequestsHTTP (List<XSTROMABrokerRequest> requests, String url) {
-    for (XSTROMABrokerRequest request : requests) {
-        String xstromaResponseString =  new String(Http.execute(url + '/servicebroker', request))
-        println ''
-        println ''
-
-        XSTROMABrokerResponse xstromaResponseObject = XSTROMABrokerResponse.parse(xstromaResponseString)
-        if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
-            STROMAResponse response = new STROMAResponse(xstromaResponseString)
-            printSTROMAResponse(response)
-            if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
-        } else {
-            printXSTROMAResponse(xstromaResponseObject)
-            if (xstromaResponseObject.getOrchestrationFault()) throw new Exception("Orchestration fault encountered in response")
-        }
-    }
-}
-
-def runSTROMARequestsHTTP (List<STROMARequest> requests, String url) {
-    for (STROMARequest request : requests) {
-        String stromaResponseString =  new String(Http.execute(url + '/' + request.getServiceName(), request))
-        println ''
-        println ''
-        STROMAResponse response = new STROMAResponse(stromaResponseString);
-        printSTROMAResponse(response)
-        if (response.getErrorCode() != 0) throw new Exception("Error encountered in response: " + response.getErrorMessage())
-    }
-}
-
-def printXSTROMAResponse (XSTROMABrokerResponse xstromaResponseObject) {
-    if (xstromaResponseObject.getOrchestrationFault()) System.out.println("Orchestration Fault Raised!!!!!")
-    if (!xstromaResponseObject.getServiceName().equals("servicebroker")) {
-        // If we're in here, this is most likely the response of a "chained" request, where it will always be
-        // the response of the last request in the X-STROMA request
-        printSTROMAResponse(new STROMAResponse(xstromaResponseString))
-    } else {
-        // We have an X-STROMA formatted response
-        println "\nX-STROMA Level Parameters"
-        println "error-code: " + xstromaResponseObject.getErrorCode()
-        println "transaction-data: " + xstromaResponseObject.getTransactionData()
-        println "service-agent: " + xstromaResponseObject.getServiceAgent()
-        println "duration: " + xstromaResponseObject.getDuration()
-        if (xstromaResponseObject.getErrorCode() != 0) {
-            println "error-message: " + xstromaResponseObject.getErrorMessage()
-            return
-        }
-
-        xstromaResponseObject.getResponses().each { STROMAResponse sr ->
-            printSTROMAResponse(sr)
-        }
-    }
-}
-
-def printSTROMAResponse (STROMAResponse sr) {
-    println ""
-    println "\tService (STROMA) Level Parameters"
-    println "\tservice: " + sr.getServiceName()
-    println "\taction: " + sr.getAction()
-    println "\terror-code: " + sr.getErrorCode()
-    println "\ttransaction-data: " + sr.getTransactionData()
-    println "\tservice-agent: " + sr.getServiceAgent()
-    println "\tduration: " + sr.getDuration()
-    if (sr.getErrorCode() != 0) {
-        println "\terror-message: " + sr.getErrorMessage()
-    }
-    // getData() retrieves any raw payload information embedded in the response (as a JSONObject or Node class type)
-    // depending on the meta type requested
-    //println "\t" + sr.getData().getClass()
-    println "\t" + sr.getParameters()
 }
