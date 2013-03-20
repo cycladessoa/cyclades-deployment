@@ -68,7 +68,6 @@ public class BuildCommon {
         }
     }
 
-
     public static void reloadServiceEngine (String url) throws Exception {
         String result = new String(ResourceRequestUtils.getData(url + "?action=reload", null));
         if (result.indexOf("servicebroker") < 0) throw new Exception("Invalid Result Encountered " + result);
