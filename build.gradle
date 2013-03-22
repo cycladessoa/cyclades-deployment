@@ -181,7 +181,7 @@ dependencies {
     nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',        version: '1.0.0.24', transitive: false
     nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',     version: '1.0.0.24', transitive: false
     nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',        version: '1.0.0.24', transitive: false
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',       version: '1.0.0.6',  transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',       version: '1.0.0.7',  transitive: false
 
     /***************************************************************************
      * NYXLET SPECIFIC SUPPORT:
