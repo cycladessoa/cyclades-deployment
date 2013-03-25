@@ -37,10 +37,11 @@ buildscript {
 }
 
 import org.cyclades.engine.stroma.xstroma.XSTROMARequestBuilder
+import org.cyclades.engine.stroma.xstroma.XSTROMABrokerRequest
 import org.cyclades.engine.stroma.xstroma.STROMARequestBuilder
 import org.cyclades.engine.stroma.xstroma.STROMARequest
 import org.cyclades.engine.util.TransactionIdentifier
-import BuildCommon
+import org.cyclades.client.DevOps
 
 task installNyxlets () {
     description = 'Upload and deploy the Nyxlets of this workspace to the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
@@ -53,74 +54,42 @@ task installNyxlets () {
 task uploadNyxlets () {
     description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
+        String faultStrategy = (exit_on_failure.equalsIgnoreCase("true")) ? "EXCEPTION" : "NOTHING";
         String password = (rootProject.hasProperty('admin_service_password')) ? admin_service_password : null 
-        for (String url : engines.split("[,]")) {
-            try {
-                println("Uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
-		BuildCommon.uploadFile(url, password, nyxlet_source_upload_path, target_upload_nyxlet_installation_path, true)
-                println("Successful upload of resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]")
-            } catch (Exception e) {
-                println("Failed uploading resource :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
+        DevOps.uploadFIleToCluster(engines.split("[,]"), password, nyxlet_source_upload_path, target_upload_nyxlet_installation_path, true, faultStrategy, true)
     }
 }
 
 task reloadServiceEngines () {
     description = 'Reloads the Cyclades Service Engines in the specified list (property "engines")'
     doLast () {
-        for (String url : engines.split("[,]")) {
-            String result = null
-            try {
-                println("RELOAD STARTING:[" + url + "]")
-                BuildCommon.reloadServiceEngine(url)
-                println("RELOAD SUCCEEDED:[" + url + "]")
-            } catch (Exception e) {
-                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
+        String faultStrategy = (exit_on_failure.equalsIgnoreCase("true")) ? "EXCEPTION" : "NOTHING";
+        DevOps.reloadServiceEnginesOnCluster(engines.split("[,]"), faultStrategy, false, true)
     }
 }
 
 task reloadServiceEnginesSafetyMode () {
     description = 'Reloads the Cyclades Service Engines in the specified list (property "engines") in safety mode'
     doLast () {
-        for (String url : engines.split("[,]")) {
-            String result = null
-            try {
-                println("RELOAD STARTING:[" + url + "]")
-                BuildCommon.reloadServiceEngineSafetyMode(url)
-                println("RELOAD SUCCEEDED:[" + url + "]")
-            } catch (Exception e) {
-                println("RELOAD FAILED:[" + url + " " + e.toString() + "]")
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
+        String faultStrategy = (exit_on_failure.equalsIgnoreCase("true")) ? "EXCEPTION" : "NOTHING";
+        DevOps.reloadServiceEnginesOnCluster(engines.split("[,]"), faultStrategy, true, true)
     }
 }
 
 task deployNyxlets () {
     description = 'Consider using "installNyxlets" and "rollBackNyxlets"'
     doLast () {
+        String faultStrategy = (exit_on_failure.equalsIgnoreCase("true")) ? "EXCEPTION" : "NOTHING";
         String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
-        for (String url : engines.split("[,]")) {
-            try {
-                displayRunMessage(tid)
-                BuildCommon.runXSTROMARequestsHTTP(generateDeploymentRequests(tid), url)
-                BuildCommon.reloadServiceEngine(url)
-            } catch (Exception e) {
-                println("Failed deploying syxlets :[" + target_upload_nyxlet_installation_path + "] to the Cyclades Service Engine [" + url + "]: " + e)
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
+        displayRunMessage(tid)
+        DevOps.executeClusteredXSTROMARequests(engines.split("[,]"), generateDeploymentRequests(tid), faultStrategy, true)
+        DevOps.reloadServiceEnginesOnCluster(engines.split("[,]"), faultStrategy, false, true)
     }
 }
 
 def generateDeploymentRequests (tid) {
     // Create X-STROMA request builder
-    List<XSTROMARequestBuilder> cycladesSOARequests = new ArrayList<XSTROMARequestBuilder>()
+    List<XSTROMABrokerRequest> cycladesSOARequests = new ArrayList<XSTROMABrokerRequest>()
     XSTROMARequestBuilder xstromaBuilder = XSTROMARequestBuilder.newInstance(null)
     
     // Add X-STROMA level parameters
@@ -185,18 +154,12 @@ def generateDeploymentRequests (tid) {
 task rollBackNyxlets () {
     description = 'Rollback a previous Nyxlet installation remotely on the specified Cyclades Service Engines in the list (property "engines"), via provided HTTP APIs'
     doLast () {
+        String faultStrategy = (exit_on_failure.equalsIgnoreCase("true")) ? "EXCEPTION" : "NOTHING";
         String tid = new TransactionIdentifier(transaction_identifier_prefix).getTransactionID()
-        for (String url : engines.split("[,]")) {
-            try {
-                displayRunMessage(tid)
-                BuildCommon.reloadServiceEngineSafetyMode(url)
-                BuildCommon.runSTROMARequestsHTTP(generateRollbackRequests(tid), url)
-                BuildCommon.reloadServiceEngine(url)
-            } catch (Exception e) {
-                println("Failed rolling back Nyxlets on the Cyclades Service Engine [" + url + "]: " + e)
-                if (exit_on_failure.equalsIgnoreCase("true")) throw e
-            }
-        }
+        displayRunMessage(tid)
+        DevOps.reloadServiceEnginesOnCluster(engines.split("[,]"), faultStrategy, true, true)
+        DevOps.executeClusteredSTROMARequests(engines.split("[,]"), generateRollbackRequests(tid), faultStrategy, true)
+        DevOps.reloadServiceEnginesOnCluster(engines.split("[,]"), faultStrategy, false, true)
     }
 }
 
