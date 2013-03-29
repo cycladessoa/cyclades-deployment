@@ -56,7 +56,7 @@ task uploadNyxlets () {
     doLast () {
         String faultStrategy = (exit_on_failure.equalsIgnoreCase("true")) ? "EXCEPTION" : "NOTHING";
         String password = (rootProject.hasProperty('admin_service_password')) ? admin_service_password : null 
-        DevOps.uploadFIleToCluster(engines.split("[,]"), password, nyxlet_source_upload_path, target_upload_nyxlet_installation_path, true, faultStrategy, true)
+        DevOps.uploadFileToCluster(engines.split("[,]"), password, nyxlet_source_upload_path, target_upload_nyxlet_installation_path, true, faultStrategy, true)
     }
 }
 
