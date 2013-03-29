@@ -67,6 +67,10 @@ This document describes the steps involved for deploying a complete Cyclades def
 
 . The Cyclades Service Engine binary distribution exists within the _build/libs_ directory after a successful build (_build/libs/cyclades.war_). Simply copy this file to your Tomcat installation's "webapps" directory and be sure to preserve the name "cyclades.war".
 
+[NOTE]
+You can also use the build system to install the Cyclades Service Engine (if the "Tomcat Manager" is running and passwords are setup correctly)
+by running _gradle installCyclades_ (see "gradle.proeprties" for settings with respect to this feature)
+
 . Restart Tomcat and verify the installation
 	.. http://localhost:8080/cyclades (Core Cyclades Service Engine status page should be displayed without error)
 	.. http://localhost:8080/cyclades?action=help (Help page displays without error)
