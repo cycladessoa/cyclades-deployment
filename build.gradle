@@ -183,7 +183,7 @@ dependencies {
     nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',        version: '1.0.0.29', transitive: false
     nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',           version: '1.0.0.29', transitive: false
     nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',          version: '1.0.0.12', transitive: false
-    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'script_engine', version: '1.0.0.2',  transitive: false
+    nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'script_engine', version: '1.0.0.4',  transitive: false
 
     /***************************************************************************
      * NYXLET SPECIFIC SUPPORT:

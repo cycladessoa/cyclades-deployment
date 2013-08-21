@@ -75,6 +75,9 @@ This document describes the steps involved for deploying a complete Cyclades def
 You can also use the build system to install the Cyclades Service Engine (if the "Tomcat Manager" is running and passwords are setup correctly)
 by running _gradle installCyclades_ (see "gradle.properties" for settings with respect to this feature)
 
+[NOTE]
+There is no authentication mechanism turned on by default for the auth, exec and script_engine Nyxlets with this installation. Simply add the property "password" in the properties file for the Nyxlet you wish to enable simple authentication on (i.e. add the property entry "password=myPassword" in the file exec.properties in the nyxlets directory to enable simple password protection for the exec Nyxlet).
+
 == Naming
 
 === Terms
