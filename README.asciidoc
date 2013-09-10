@@ -78,6 +78,49 @@ by running _gradle installCyclades_ (see "gradle.properties" for settings with r
 [NOTE]
 There is no authentication mechanism turned on by default for the auth, exec and script_engine Nyxlets with this installation. Simply add the property "password" in the properties file for the Nyxlets that you wish to enforce simple authentication (i.e. add the property entry "password=myPassword" in the file exec.properties in the nyxlets directory to enable simple password protection for the exec Nyxlet).
 
+== Adding And Removing Nyxlets/Services From Your Distribution
+
+Simply add or remove *nyxlets* entries from the _dependecies_ closure of your _build.gradle_ file prior to building:
+
+.Before removing the _helloworld_ Nyxlet
+----
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'helloworld',    version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',           version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',        version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',           version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',          version: '1.0.0.12', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'script_engine', version: '1.0.0.4',  transitive: false
+
+----
+
+.After removing the _helloworld_ Nyxlet
+----
+
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',           version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',        version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',           version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',          version: '1.0.0.12', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'script_engine', version: '1.0.0.4',  transitive: false
+
+----
+
+.After adding the _r_ Nyxlet
+----
+
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'log',           version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'restfs',        version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'xsl',           version: '1.0.0.29', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',          version: '1.0.0.12', transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'script_engine', version: '1.0.0.4',  transitive: false
+nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'r',             version: '1.0.0.1',  transitive: false
+----
+
+[NOTE]
+You can make properties accessible to your Nyxlets by placing a file named after your Nyxlet with the _.properties_ suffix in the
+_src/main/webapp/WEB-INF/nyxlets_ directory. The Cyclades Service Engine will look for this file and automatically load and make 
+the properties available to yout Nyxlet if present. You will notice this distribution includes some by default...like _restfs.properties_,
+ for example.
+
 == Naming
 
 === Terms
