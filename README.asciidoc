@@ -80,7 +80,7 @@ There is no authentication mechanism turned on by default for the auth, exec and
 
 == Adding And Removing Nyxlets/Services From Your Distribution
 
-Simply add or remove *nyxlets* entries from the _dependecies_ closure/section of your _build.gradle_ file prior to building:
+* Add or remove *nyxlets* entries from the _dependecies_ closure/section of your _build.gradle_ file prior to building:
 
 .Before removing the _helloworld_ Nyxlet
 ----
@@ -114,6 +114,8 @@ nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'exec',          version:
 nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'script_engine', version: '1.0.0.4',  transitive: false
 nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'r',             version: '1.0.0.1',  transitive: false
 ----
+
+* Manually add or remove _*.nyxlet_ files to or from the _src/main/webapp/WEB-INF/nyxlets_ directory prior to building.
 
 [NOTE]
 You can make properties accessible to your Nyxlets by placing a file named after your Nyxlet with the _.properties_ suffix in the
