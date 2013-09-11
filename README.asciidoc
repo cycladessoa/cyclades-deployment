@@ -80,7 +80,7 @@ There is no authentication mechanism turned on by default for the auth, exec and
 
 == Adding And Removing Nyxlets/Services From Your Distribution
 
-Simply add or remove *nyxlets* entries from the _dependecies_ closure of your _build.gradle_ file prior to building:
+Simply add or remove *nyxlets* entries from the _dependecies_ closure/section of your _build.gradle_ file prior to building:
 
 .Before removing the _helloworld_ Nyxlet
 ----
