@@ -118,7 +118,7 @@ nyxlets group: 'com.github.cycladessoa.nyxlets', name: 'r',             version:
 [NOTE]
 You can make properties accessible to your Nyxlets by placing a file named after your Nyxlet with the _.properties_ suffix in the
 _src/main/webapp/WEB-INF/nyxlets_ directory. The Cyclades Service Engine will look for this file and automatically load and make 
-the properties available to yout Nyxlet if present. You will notice this distribution includes some by default...like _restfs.properties_,
+the properties available to your Nyxlet if present. You will notice this distribution includes some by default...like _restfs.properties_,
  for example.
 
 == Naming
