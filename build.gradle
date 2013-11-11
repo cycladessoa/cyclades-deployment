@@ -44,6 +44,7 @@ configurations {
     runtime
     nyxlets
     nyxletsadmin
+    nyxletsloadlast
     newConf
 }
 
@@ -56,11 +57,15 @@ war {
         from configurations.nyxletsadmin
     }
 
+    into('WEB-INF/nyxletsloadlast') {
+        from configurations.nyxletsloadlast
+    }
+
     // newConf related - tbd...most likely rarely used
     from { configurations.newConf.collect { it.isDirectory() ? it : zipTree(it) } }
 
     //strip out the version format from the nyxlet filename
-    rootSpec.allSpecs*.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
+    rootSpec.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
 }
 
 /***************************************************
@@ -77,6 +82,9 @@ war.doFirst() {
         addArtifact("$f", listKey, listValue)
     }
     configurations.nyxletsadmin.each { f->
+        addArtifact("$f", listKey, listValue)
+    }
+    configurations.nyxletsloadlast.each { f->
         addArtifact("$f", listKey, listValue)
     }
     configurations.newConf.each { f->
@@ -127,7 +135,7 @@ war.doLast() {
 task copyNyxletLibs(type: Copy) {
     into "${buildDir}/libs/nyxlets"
     from configurations.nyxlets
-    rootSpec.allSpecs*.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
+    rootSpec.rename('(.*)-(.*).nyxlet', '$1.nyxlet')
 }
 
 task copyNyxletsDir(type: Copy, dependsOn: copyNyxletLibs) {
@@ -168,8 +176,8 @@ dependencies {
      * - Nyxlets that should be deployed with the Cyclades Service Engine by default
      * - Available to all clients of "the platform", i.e. Cylades clients and Nyxlets via orchestration
      ***************************************************************************/
-    nyxlets      group: 'com.github.cycladessoa.nyxlets', name: 'servicebroker', version: '1.0.0.29', transitive: false
-    nyxletsadmin group: 'com.github.cycladessoa.nyxlets', name: 'admin',         version: '1.0.0.29', transitive: false
+    nyxletsloadlast group: 'com.github.cycladessoa.nyxlets', name: 'servicebroker', version: '1.0.0.29', transitive: false
+    nyxletsadmin    group: 'com.github.cycladessoa.nyxlets', name: 'admin',         version: '1.0.0.29', transitive: false
 
     /***************************************************************************
      * NYXLET DEPLOYMENT INVENTORY:
